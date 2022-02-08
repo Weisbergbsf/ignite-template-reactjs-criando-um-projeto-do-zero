@@ -1,6 +1,16 @@
+import { useState } from 'react';
 import { GetStaticProps } from 'next';
 
+import Head from 'next/head';
+import Link from 'next/link';
+import { AiOutlineCalendar } from 'react-icons/ai';
+import { FiUser } from 'react-icons/fi';
+
+import Prismic from '@prismicio/client';
+
 import { getPrismicClient } from '../services/prismic';
+import { formatDate } from './_utils/formatDate';
+import { postDTO } from './_utils/postDTO';
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
@@ -24,13 +34,78 @@ interface HomeProps {
   postsPagination: PostPagination;
 }
 
-// export default function Home() {
-//   // TODO
-// }
+export default function Home({ postsPagination }: HomeProps): JSX.Element {
+  const [posts, setPosts] = useState<Post[]>(postsPagination.results);
+  const [nextPage, setNextPage] = useState(postsPagination.next_page);
 
-// export const getStaticProps = async () => {
-//   // const prismic = getPrismicClient();
-//   // const postsResponse = await prismic.query(TODO);
+  const loadMorePosts = async (): Promise<void> => {
+    await fetch(nextPage)
+      .then(response => response.json())
+      .then(data => {
+        const postsLoaded = data.results.map(post => postDTO(post));
+        setPosts(prevState => [...prevState, ...postsLoaded]);
+        setNextPage(data.next_page);
+      })
+      .catch(() => setPosts([]));
+  };
 
-//   // TODO
-// };
+  return (
+    <>
+      <Head>
+        <title>Home | spacetraveling.</title>
+      </Head>
+
+      <main className={styles.container}>
+        {posts.map(post => {
+          return (
+            <article className={styles.post} key={post.uid}>
+              <Link href={`/post/${post.uid}`}>
+                <a>
+                  <h1 className={commonStyles.heading}>{post.data.title}</h1>
+                </a>
+              </Link>
+              <p className={commonStyles.body}>{post.data.subtitle}</p>
+              <footer className={styles.info}>
+                <div>
+                  <AiOutlineCalendar />
+                  <time>{formatDate(post.first_publication_date)}</time>
+                </div>
+                <div className={styles.author}>
+                  <FiUser />
+                  <span>{post.data.author}</span>
+                </div>
+              </footer>
+            </article>
+          );
+        })}
+        {nextPage && (
+          <button onClick={loadMorePosts} type="button">
+            Carregar mais posts
+          </button>
+        )}
+      </main>
+    </>
+  );
+}
+
+export const getStaticProps: GetStaticProps = async () => {
+  const prismic = getPrismicClient();
+
+  const postsResponse = await prismic.query(
+    [Prismic.predicates.at('document.type', 'posts')],
+    {
+      fetch: ['posts.title', 'posts.subtitle', 'posts.author'],
+      pageSize: 1,
+    }
+  );
+  const results = postsResponse.results.map(post => postDTO(post));
+
+  return {
+    props: {
+      postsPagination: {
+        next_page: postsResponse.next_page,
+        results,
+      },
+    },
+  };
+};
