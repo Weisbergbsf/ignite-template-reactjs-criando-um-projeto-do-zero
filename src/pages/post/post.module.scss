@@ -1,6 +1,6 @@
 .post {
     max-width: 700px;
-    margin: 5rem auto;
+    margin: 5rem auto 3.75rem auto;
 
     h1 {
         font-weight: bold;
@@ -11,6 +11,7 @@
         display: flex;
         color: var(--gray-300);
         margin-top: 1.5rem;
+        margin-bottom: 1rem;
 
         div {
             display: flex;
@@ -26,6 +27,12 @@
             margin-left: 0.5rem;
         }
 
+        & + time {
+            font-style: italic;
+            font-size: 0.875rem;
+            color: var(--gray-300);
+        }
+
         svg {
             width: 20px;
             height: 20px;
@@ -36,10 +43,10 @@
 .content {
     margin-top: 4rem;
 
-     h2 {
+    h2 {
         font-size: 2rem;
         letter-spacing: -0.5px;
-    } 
+    }
 
     div {
         & + div {
@@ -48,8 +55,8 @@
     }
 
     p {
-        margin-top: 2rem; 
-        font-size: 1.0rem;
+        margin-top: 2rem;
+        font-size: 1rem;
         line-height: 1.5rem;
 
         & + p {
@@ -59,5 +66,48 @@
 
     strong {
         color: var(--pink);
+    }
+}
+
+.footer {
+    border-top: 1px solid var(--gray-200);
+    max-width: 700px;
+    height: 538px;
+    margin: 0 auto 5rem auto;
+    color: white;
+
+    .pagination {
+        display: flex;
+        justify-content: space-between;
+
+        margin-top: 3rem;
+
+        div + div {
+            text-align: right;
+        }
+
+        a {
+            border: 0;
+            background: transparent;
+            color: var(--pink);
+            font-weight: 600;
+            font-size: 1rem;
+
+            transition: filter 0.2s;
+
+            &:hover {
+                filter: brightness(0.8);
+                text-decoration: underline;
+            }
+        }
+    }
+
+    h3 {
+        font-size: 1.125rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .comments {
+        margin-top: 5rem;
     }
 }

@@ -1,6 +1,7 @@
 /* eslint-disable react/no-danger */
 import { GetStaticPaths, GetStaticProps } from 'next';
 import Head from 'next/head';
+import Link from 'next/link';
 
 import Prismic from '@prismicio/client';
 
@@ -11,14 +12,17 @@ import { useRouter } from 'next/router';
 import { RichText } from 'prismic-dom';
 import { getPrismicClient } from '../../services/prismic';
 
-import { formatDate } from '../_utils/formatDate';
-import { getEstimatedReadingTime } from '../_utils/getEstimatedReadingTime';
+import { formatDate } from '../../utils/formatDate';
+import { getEstimatedReadingTime } from '../../utils/getEstimatedReadingTime';
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
+import { Comments } from '../../components/Comments';
 
 interface Post {
+  uid?: string;
   first_publication_date: string | null;
+  last_publication_date: string | null;
   data: {
     title: string;
     banner: {
@@ -36,9 +40,17 @@ interface Post {
 
 interface PostProps {
   post: Post;
+  prevPost: Post;
+  nextPost: Post;
+  preview: boolean;
 }
 
-export default function Post({ post }: PostProps): JSX.Element {
+export default function Post({
+  post,
+  prevPost,
+  nextPost,
+  preview,
+}: PostProps): JSX.Element {
   const router = useRouter();
 
   if (router.isFallback) {
@@ -51,14 +63,14 @@ export default function Post({ post }: PostProps): JSX.Element {
         <title>{post.data.title} | spacetraveling.</title>
       </Head>
 
-      <main className={styles.container}>
-        <img src={post.data.banner.url} alt={post.data.title} />
+      <img src={post.data.banner.url} alt={post.data.title} />
+      <main>
         <article className={styles.post}>
           <h1 className={commonStyles.heading}>{post.data.title}</h1>
           <div className={styles.info}>
             <div>
               <AiOutlineCalendar />
-              <time>{formatDate(post.first_publication_date)}</time>
+              <time>{formatDate({ date: post.first_publication_date })}</time>
             </div>
 
             <div>
@@ -71,6 +83,14 @@ export default function Post({ post }: PostProps): JSX.Element {
               <span>{getEstimatedReadingTime(post.data.content)}</span>
             </div>
           </div>
+          {post.first_publication_date !== post.last_publication_date && (
+            <time>
+              {formatDate({
+                date: post.last_publication_date,
+                mask: "'* editado em' dd MMM yyyy, 'às' hh:mm",
+              })}
+            </time>
+          )}
           <div className={styles.content}>
             {post.data.content.map(content => {
               return (
@@ -88,6 +108,36 @@ export default function Post({ post }: PostProps): JSX.Element {
           </div>
         </article>
       </main>
+      <footer className={styles.footer}>
+        <div className={styles.pagination}>
+          {prevPost && (
+            <div>
+              <h3>{prevPost.data.title}</h3>
+              <Link href={`/post/${prevPost.uid}`}>
+                <a>Post anterior</a>
+              </Link>
+            </div>
+          )}
+          {nextPost && (
+            <div>
+              <h3>{nextPost.data.title}</h3>
+              <Link href={`/post/${nextPost.uid}`}>
+                <a>Próximo post</a>
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <Comments />
+
+        {preview && (
+          <aside>
+            <Link href="/api/exit-preview">
+              <a className={commonStyles.preview}>Sair do modo Preview</a>
+            </Link>
+          </aside>
+        )}
+      </footer>
     </>
   );
 }
@@ -113,13 +163,40 @@ export const getStaticPaths: GetStaticPaths = async () => {
   };
 };
 
-export const getStaticProps: GetStaticProps = async ({ params }) => {
+export const getStaticProps: GetStaticProps = async ({
+  params,
+  preview = false,
+  previewData,
+}) => {
   const prismic = getPrismicClient();
-  const post = await prismic.getByUID('posts', String(params.slug), {});
+  const post = await prismic.getByUID('posts', String(params.slug), {
+    ref: previewData?.ref ?? null,
+  });
+
+  const prevPost = await prismic.query(
+    [Prismic.predicates.at('document.type', 'posts')],
+    {
+      pageSize: 1,
+      after: post.id,
+      orderings: '[document.first_publication_date]',
+    }
+  );
+
+  const nextPost = await prismic.query(
+    [Prismic.predicates.at('document.type', 'posts')],
+    {
+      pageSize: 1,
+      after: post.id,
+      orderings: '[document.first_publication_date desc]',
+    }
+  );
 
   return {
     props: {
       post,
+      prevPost: prevPost?.results[0] ?? null,
+      nextPost: nextPost?.results[0] ?? null,
+      preview,
     },
   };
 };

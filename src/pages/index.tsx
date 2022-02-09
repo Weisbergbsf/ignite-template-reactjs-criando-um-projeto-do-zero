@@ -9,8 +9,8 @@ import { FiUser } from 'react-icons/fi';
 import Prismic from '@prismicio/client';
 
 import { getPrismicClient } from '../services/prismic';
-import { formatDate } from './_utils/formatDate';
-import { postDTO } from './_utils/postDTO';
+import { formatDate } from '../utils/formatDate';
+import { postDTO } from '../utils/postDTO';
 
 import commonStyles from '../styles/common.module.scss';
 import styles from './home.module.scss';
@@ -32,9 +32,13 @@ interface PostPagination {
 
 interface HomeProps {
   postsPagination: PostPagination;
+  preview: boolean;
 }
 
-export default function Home({ postsPagination }: HomeProps): JSX.Element {
+export default function Home({
+  postsPagination,
+  preview,
+}: HomeProps): JSX.Element {
   const [posts, setPosts] = useState<Post[]>(postsPagination.results);
   const [nextPage, setNextPage] = useState(postsPagination.next_page);
 
@@ -68,7 +72,9 @@ export default function Home({ postsPagination }: HomeProps): JSX.Element {
               <footer className={styles.info}>
                 <div>
                   <AiOutlineCalendar />
-                  <time>{formatDate(post.first_publication_date)}</time>
+                  <time>
+                    {formatDate({ date: post.first_publication_date })}
+                  </time>
                 </div>
                 <div className={styles.author}>
                   <FiUser />
@@ -83,12 +89,22 @@ export default function Home({ postsPagination }: HomeProps): JSX.Element {
             Carregar mais posts
           </button>
         )}
+        {preview && (
+          <aside>
+            <Link href="/api/exit-preview">
+              <a className={commonStyles.preview}>Sair do modo Preview</a>
+            </Link>
+          </aside>
+        )}
       </main>
     </>
   );
 }
 
-export const getStaticProps: GetStaticProps = async () => {
+export const getStaticProps: GetStaticProps = async ({
+  preview = true,
+  previewData,
+}) => {
   const prismic = getPrismicClient();
 
   const postsResponse = await prismic.query(
@@ -96,6 +112,7 @@ export const getStaticProps: GetStaticProps = async () => {
     {
       fetch: ['posts.title', 'posts.subtitle', 'posts.author'],
       pageSize: 1,
+      ref: previewData?.ref ?? null,
     }
   );
   const results = postsResponse.results.map(post => postDTO(post));
@@ -106,6 +123,7 @@ export const getStaticProps: GetStaticProps = async () => {
         next_page: postsResponse.next_page,
         results,
       },
+      preview,
     },
   };
 };
